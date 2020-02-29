@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 import random
 import time, datetime
+import pickle
 
 from env import GameEnv
 
@@ -29,7 +30,7 @@ class DeepQNetwork():
     def __init__(self, states, actions, alpha, gamma, epsilon, epsilon_min, epsilon_decay):
         self.nS = states
         self.nA = actions
-        self.memory = deque([], maxlen=2500)
+        self.memory = deque([], maxlen=25000)
         self.alpha = alpha
         self.gamma = gamma
         #Explore/Exploit
@@ -37,6 +38,10 @@ class DeepQNetwork():
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
         self.model = self.build_model()
+        self.target_model = self.build_model()
+        self.target_model_update = 3
+        self.step = 0
+
         self.loss = []
         
     def build_model(self):
@@ -48,6 +53,18 @@ class DeepQNetwork():
                       optimizer=keras.optimizers.Adam(lr=self.alpha)) #Optimaizer: Adam (Feel free to check other options)
         return model
 
+    def clone_model(self, model, custom_objects={}):
+        config = {
+            'class_name': model.__class__.__name__,
+            'config': model.get_config(),
+        }
+        clone = model_from_config(config, custom_objects=custom_objects)
+        clone.set_weights(model.get_weights())
+        return clone
+
+    def update_target_model_hard(self):
+        self.target_model.set_weights(self.model.get_weights())
+
     def save(self, path: str) -> None:
         # We store things in two steps: One .pkl file for metadata (hypers, vocab, etc.)
         # and then the default TF weight saving.
@@ -58,7 +75,7 @@ class DeepQNetwork():
         }
         with open(path, "wb") as out_file:
             pickle.dump(data_to_store, out_file, pickle.HIGHEST_PROTOCOL)
-        self.save_weights(path, save_format="tf")
+        self.target_model.save_weights(path, save_format="tf")
 
     @classmethod
     def restore(cls, saved_model_path: str):
@@ -73,11 +90,11 @@ class DeepQNetwork():
     def action(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.nA) #Explore
-        action_vals = self.model.predict(state) #Exploit: Use the NN to predict the correct action from this state
+        action_vals = self.target_model.predict(state) #Exploit: Use the NN to predict the correct action from this state
         return np.argmax(action_vals[0])
 
     def test_action(self, state): #Exploit
-        action_vals = self.model.predict(state)
+        action_vals = self.target_model.predict(state)
         return np.argmax(action_vals[0])
 
     def store(self, state, action, reward, nstate, done):
@@ -97,8 +114,8 @@ class DeepQNetwork():
         for i in range(len(np_array)): #Creating the state and next state np arrays
             st = np.append( st, np_array[i,0], axis=0)
             nst = np.append( nst, np_array[i,3], axis=0)
-        st_predict = self.model.predict(st) #Here is the speedup! I can predict on the ENTIRE batch
-        nst_predict = self.model.predict(nst)
+        st_predict = self.target_model.predict(st) #Here is the speedup! I can predict on the ENTIRE batch
+        nst_predict = self.target_model.predict(nst)
         index = 0
         for state, action, reward, nstate, done in minibatch:
             x.append(state)
@@ -123,4 +140,9 @@ class DeepQNetwork():
         #Decay Epsilon
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+
+        if self.target_model_update >= 1 and self.step % self.target_model_update == 0:
+            self.update_target_model_hard()
+
+        self.step += 1
 
