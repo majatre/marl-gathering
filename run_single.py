@@ -8,7 +8,7 @@ from env import GameEnv
 from dqn import DeepQNetwork, batch_size, learning_rate, discount_rate
 
 WRITE_VIDEO = False
-EPISODES = 1000
+EPISODES = 500
 TRAIN_END = 0
 
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -28,6 +28,18 @@ save_file = "saved_models/DQN-%s" % (time.strftime("%Y-%m-%d-%H-%M-%S"))
 
 agent.save(save_file)
 print(f"  (Saved model to {save_file})")
+
+def plot(rewards):
+    plt.plot(rewards)
+    plt.xlim(0, len(rewards))
+    rolling_average = np.convolve(rewards, np.ones(100)/100)
+    plt.plot(rolling_average, color='black')
+    #Plot the line where TESTING begins
+    if TRAIN_END > 0:
+        plt.axvline(x=TRAIN_END, color='y', linestyle='-')
+    plt.savefig(save_file+'plot.png')
+    plt.show()
+
 
 #Training
 rewards = [] #Store rewards for graphing
@@ -80,18 +92,19 @@ for e in range(EPISODES):
         print(f"  (Saved model to {save_file})")
 
     #If our current NN passes we are done
-    if len(rewards) > 5 and np.average(rewards[-5:]) > 800:
-        #Set the rest of the EPISODES for testing
-        TEST_Episodes = EPISODES - e
-        TRAIN_END = e
+    # if len(rewards) > 5 and np.average(rewards[-5:]) > 800:
+    #     #Set the rest of the EPISODES for testing
+    #     TEST_Episodes = min(EPISODES - e, 50)
+    #     TRAIN_END = e
 
-        agent.save(save_file)
-        print(f"  (Saved model to {save_file})")
-        break
+    #     agent.save(save_file)
+    #     print(f"  (Saved model to {save_file})")
+    #     break
 
     if e%50 == 0:
         plot(rewards)
 
+plot(rewards)
 
 # Test the agent that was trained
 # In this section we ALWAYS use exploit don't train any more
@@ -114,14 +127,5 @@ for e_test in range(TEST_Episodes):
                   .format(e_test, TEST_Episodes, tot_rewards, 0))
             break
 
-
-def plot(rewards):
-    plt.plot(rewards)
-    rolling_average = np.convolve(rewards, np.ones(100)/100)
-    plt.plot(rolling_average, color='black')
-    #Plot the line where TESTING begins
-    plt.axvline(x=TRAIN_END, color='y', linestyle='-')
-    plt.savefig(save_file+'plot.png')
-    plt.show()
 
 plot(rewards)

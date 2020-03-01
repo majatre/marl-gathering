@@ -10,11 +10,6 @@ import pickle
 
 from env import GameEnv
 
-
-
-EPISODES = 500
-TRAIN_END = 0
-
 #Hyper Parameters
 def discount_rate(): #Gamma
     return 0.99
