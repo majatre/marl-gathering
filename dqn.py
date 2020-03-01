@@ -77,10 +77,13 @@ class DeepQNetwork():
         with open(saved_model_path, "rb") as fh:
             saved_data = pickle.load(fh)
 
-        model = cls(saved_data["num_states"], saved_data["num_actions"], learning_rate(), discount_rate(), 1, 0.1, 0.9995)
-        model.build(tf.TensorShape([None, None, None]))
-        model.load_weights(saved_model_path)
-        return model
+        agent = cls(saved_data["num_states"], saved_data["num_actions"], learning_rate(), discount_rate(), 1, 0.1, 0.9995)
+        agent.target_model.build(tf.TensorShape([None, None, None]))
+        agent.target_model.load_weights(saved_model_path)
+
+        agent.model.build(tf.TensorShape([None, None, None]))
+        agent.model.load_weights(saved_model_path)
+        return agent
 
     def action(self, state):
         if np.random.rand() <= self.epsilon:
