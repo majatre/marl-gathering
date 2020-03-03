@@ -11,7 +11,8 @@ WRITE_VIDEO = False
 EPISODES = 500
 TRAIN_END = 0
 
-current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M")
+NAME = f"DQNvsR-lr{learning_rate()}-dr{discount_rate()}-bs{batch_size()}-{current_time}"
 
 #Create the env
 env = GameEnv()
@@ -24,26 +25,23 @@ nA = env.action_num #Actions
 agent = DeepQNetwork(nS, nA, learning_rate(), discount_rate(), 1, 0.1, 0.9999 )
 batch_size = batch_size()
 
-save_file = "saved_models/DQN-%s" % (time.strftime("%Y-%m-%d-%H-%M-%S"))
-
-agent.save(save_file)
-print(f"  (Saved model to {save_file})")
+save_file = "saved_models/" + NAME 
+writer = tf.summary.create_file_writer("logs/" + NAME)
 
 def plot(rewards):
+    plt.clf()
     plt.plot(rewards)
     plt.xlim(0, len(rewards))
-    rolling_average = np.convolve(rewards, np.ones(100)/100)
-    plt.plot(rolling_average, color='black')
+    # rolling_average = np.convolve(rewards, np.ones(100)/100)
+    # plt.plot(rolling_average, color='black')
     #Plot the line where TESTING begins
-    if TRAIN_END > 0:
-        plt.axvline(x=TRAIN_END, color='y', linestyle='-')
-    plt.savefig(save_file+'plot.png')
+    plt.savefig(save_file+'-plot.png')
     plt.show()
-
 
 #Training
 rewards = [] #Store rewards for graphing
 epsilons = [] # Store the Explore/Exploit
+best_rewards = 0
 TEST_Episodes = 0
 for e in range(EPISODES):
     state = env.reset()
@@ -52,7 +50,7 @@ for e in range(EPISODES):
     if WRITE_VIDEO and e%100 == 0:
         fig = plt.figure()
         frames = []
-    for time in range(1000): #200 is when you "solve" the game. This can continue forever as far as I know
+    for time in range(1000): 
         if WRITE_VIDEO and e%100 == 0:
             temp = env.render_env()
             frames.append([
@@ -61,7 +59,7 @@ for e in range(EPISODES):
         
         action = agent.action(state)
 
-        reward, _ = env.move(action, 7)
+        reward, _ = env.move(action, np.random.randint(8))
         nstate = tf.reshape(env.contribute_metrix(), [-1])
         done = 0
 
@@ -75,6 +73,9 @@ for e in range(EPISODES):
             epsilons.append(agent.epsilon)
             print("episode: {}/{}, score: {}, e: {}"
                   .format(e, EPISODES, tot_rewards, agent.epsilon))
+            with writer.as_default():
+                tf.summary.scalar('Reward', tot_rewards, e)
+                tf.summary.scalar('Epsilon', agent.epsilon, e)
             break
         #Experience Replay
         if len(agent.memory) > batch_size:
@@ -87,45 +88,12 @@ for e in range(EPISODES):
         ani.save('movies/'+current_time+'_episode_'+str(e)+'.mp4',  writer=writer)
         print(f'Video for episode {e} saved.')
     #If our current NN passes we are done
-    if len(rewards) > 5 and np.average(rewards[-5:]) > 400:
+    if len(rewards) > 5 and np.average(rewards[-5:]) > best_rewards:
+        best_rewards = np.average(rewards[-5:])
         agent.save(save_file)
         print(f"  (Saved model to {save_file})")
 
-    #If our current NN passes we are done
-    # if len(rewards) > 5 and np.average(rewards[-5:]) > 800:
-    #     #Set the rest of the EPISODES for testing
-    #     TEST_Episodes = min(EPISODES - e, 50)
-    #     TRAIN_END = e
-
-    #     agent.save(save_file)
-    #     print(f"  (Saved model to {save_file})")
-    #     break
-
     if e%50 == 0:
         plot(rewards)
-
-plot(rewards)
-
-# Test the agent that was trained
-# In this section we ALWAYS use exploit don't train any more
-for e_test in range(TEST_Episodes):
-    state = env.reset()
-    state = np.reshape(state, [1, nS])
-    tot_rewards = 0
-    for t_test in range(1000):
-        action = agent.test_action(state)
-        reward, _ = env.move(action, 7)
-        nstate = tf.reshape(env.contribute_metrix(), [-1])
-        nstate = np.reshape( nstate, [1, nS])
-        tot_rewards += reward
-        #DON'T STORE ANYTHING DURING TESTING
-        state = nstate
-        if t_test == 999: 
-            rewards.append(tot_rewards)
-            epsilons.append(0) #We are doing full exploit
-            print("episode: {}/{}, score: {}, e: {}"
-                  .format(e_test, TEST_Episodes, tot_rewards, 0))
-            break
-
 
 plot(rewards)

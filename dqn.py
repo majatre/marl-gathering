@@ -15,7 +15,7 @@ def discount_rate(): #Gamma
     return 0.99
 
 def learning_rate(): #Alpha
-    return 0.001
+    return 0.0001
 
 def batch_size(): #Size of the batch used in the experience replay
     return 24
