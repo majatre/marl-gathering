@@ -8,8 +8,6 @@ import random
 import time, datetime
 import pickle
 
-from env import GameEnv
-
 #Hyper Parameters
 def discount_rate(): #Gamma
     return 0.99
@@ -21,7 +19,7 @@ def batch_size(): #Size of the batch used in the experience replay
     return 24
 
 
-class DeepQNetwork():
+class DoubleDeepQNetwork():
     def __init__(self, states, actions, alpha, gamma, epsilon, epsilon_min, epsilon_decay):
         self.nS = states
         self.nA = actions
@@ -83,6 +81,9 @@ class DeepQNetwork():
 
         agent.model.build(tf.TensorShape([None, None, None]))
         agent.model.load_weights(saved_model_path)
+
+        agent.epsilon = 0.1
+
         return agent
 
     def action(self, state):
@@ -112,17 +113,19 @@ class DeepQNetwork():
         for i in range(len(np_array)): #Creating the state and next state np arrays
             st = np.append( st, np_array[i,0], axis=0)
             nst = np.append( nst, np_array[i,3], axis=0)
-        st_predict = self.target_model.predict(st) #Here is the speedup! I can predict on the ENTIRE batch
-        nst_predict = self.target_model.predict(nst)
+        st_predict = self.model.predict(st) #Here is the speedup! I can predict on the ENTIRE batch
+        nst_predict = self.model.predict(nst)
+        nst_predict_target = self.target_model.predict(nst) #Predict from the TARGET
         index = 0
         for state, action, reward, nstate, done in minibatch:
             x.append(state)
             #Predict from state
+            nst_action_predict_target = nst_predict_target[index]
             nst_action_predict_model = nst_predict[index]
             if done == True: #Terminal: Just assign reward much like {* (not done) - QB[state][action]}
                 target = reward
             else:   #Non terminal
-                target = reward + self.gamma * np.amax(nst_action_predict_model)
+                target = reward + self.gamma * nst_action_predict_target[np.argmax(nst_action_predict_model)] #Using Q to get T is Double DQN
             target_f = st_predict[index]
             target_f[action] = target
             y.append(target_f)
@@ -130,7 +133,7 @@ class DeepQNetwork():
         #Reshape for Keras Fit
         x_reshape = np.array(x).reshape(batch_size,self.nS)
         y_reshape = np.array(y)
-        epoch_count = 1 #Epochs is the number or iterations
+        epoch_count = 1
         hist = self.model.fit(x_reshape, y_reshape, epochs=epoch_count, verbose=0)
         #Graph Losses
         for i in range(epoch_count):

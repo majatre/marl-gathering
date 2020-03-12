@@ -4,8 +4,8 @@ import matplotlib.animation
 import numpy as np
 import tensorflow as tf
 
-from env import GameEnv
-from dqn import DeepQNetwork, batch_size, learning_rate, discount_rate
+from environments.env import GameEnv
+from agents.dqn import DeepQNetwork, batch_size, learning_rate, discount_rate
 
 WRITE_VIDEO = False
 EPISODES = 500
@@ -22,6 +22,7 @@ state = tf.reshape(env.contribute_metrix(), [-1])
 #Create agent
 nS = state.shape[0] 
 nA = env.action_num #Actions
+
 agent = DeepQNetwork(nS, nA, learning_rate(), discount_rate(), 1, 0.1, 0.9999 )
 batch_size = batch_size()
 
@@ -32,9 +33,6 @@ def plot(rewards):
     plt.clf()
     plt.plot(rewards)
     plt.xlim(0, len(rewards))
-    # rolling_average = np.convolve(rewards, np.ones(100)/100)
-    # plt.plot(rolling_average, color='black')
-    #Plot the line where TESTING begins
     plt.savefig(save_file+'-plot.png')
     plt.show()
 
@@ -65,7 +63,7 @@ for e in range(EPISODES):
 
         nstate = np.reshape(nstate, [1, nS])
         tot_rewards += reward
-        agent.store(state, action, reward, nstate, done) # Resize to store in memory to pass to .predict
+        agent.store(state, action, reward, nstate, done) 
         state = nstate
 
         if done or time == 999:

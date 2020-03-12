@@ -4,9 +4,9 @@ import matplotlib.animation
 import numpy as np
 import tensorflow as tf
 
-from env import GameEnv
-from dqn import DeepQNetwork, batch_size, learning_rate, discount_rate
-from ddqn import DoubleDeepQNetwork
+from environments.env import GameEnv
+from agents.dqn import DeepQNetwork, batch_size, learning_rate, discount_rate
+from agents.ddqn import DoubleDeepQNetwork
 
 
 WRITE_VIDEO = False
@@ -35,7 +35,7 @@ writer = tf.summary.create_file_writer("logs/" + NAME)
 def plot(rewards1, rewards2 = None):
     plt.clf()
     plt.plot(rewards1, label='DQN rewards')
-    if reward2:
+    if rewards2:
         plt.plot(rewards2, label='DDQN rewards')
     plt.xlim(0, len(rewards1))
     # rolling_average = np.convolve(rewards, np.ones(100)/100)
@@ -46,6 +46,7 @@ def plot(rewards1, rewards2 = None):
     plt.legend()
     plt.savefig(save_file+'-plot.png')
     plt.show()
+
 
 #Training
 rewards = [] #Store rewards for graphing
