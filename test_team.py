@@ -41,8 +41,8 @@ def run(arguments) -> None:
     env = GameEnv()
     env.reset()
 
-    agent1 = DeepQNetwork.restore("saved_models/teams/t/teams-lr0.0001-dr0.99-bs24-20200312-1120-1")
-    agent2 = DeepQNetwork.restore("saved_models/teams/t/teams-lr0.0001-dr0.99-bs24-20200312-1120-2")
+    agent1 = DeepQNetwork.restore("saved_models/teams-6/teams-lr0.0001-dr0.99-bs16-20200323-0901-1")
+    agent2 = DeepQNetwork.restore("saved_models/teams-6/teams-lr0.0001-dr0.99-bs16-20200323-0901-2")
     # agent3 = DeepQNetwork.restore("saved_models/teams/teams-lr0.0001-dr0.99-bs24-20200307-1240-3")
     # agent4 = DeepQNetwork.restore("saved_models/teams/teams-lr0.0001-dr0.99-bs24-20200307-1240-4")
 
@@ -55,18 +55,18 @@ def run(arguments) -> None:
         tot_reward2 = 0
 
 
-        if WRITE_VIDEO and e_test == 0:
+        if WRITE_VIDEO:
             fig = plt.figure()
             frames = []
 
         for t_test in range(1000):
             if SHOW_GAME:
                 show_game(env.render_env(), t_test, tot_reward1, tot_reward2)
-            if WRITE_VIDEO and e_test == 0:
+            if WRITE_VIDEO:
                 temp = env.render_env()
                 frames.append([
                     plt.text(0, -1, "Time: " + str(t_test), fontsize=8), 
-                    plt.text(7, -1, "Total reward - player 1: " + str(tot_reward1) + ",  player 2: " + str(tot_reward2), fontsize=8), 
+                    plt.text(7, -1, "Total reward - BLUE: " + str(tot_reward1) + ",  RED: " + str(tot_reward2), fontsize=8), 
                     plt.imshow(temp,animated=True)])
 
             agent1_action = agent1.test_action(state)
@@ -80,18 +80,17 @@ def run(arguments) -> None:
             tot_reward1 += reward1
             tot_reward2 += reward2
 
-            #DON'T STORE ANYTHING DURING TESTING
             state = nstate
             if t_test == 999: 
                 print("episode: {}/{}, scores: {}, {}"
                     .format(e_test, TEST_Episodes, tot_reward1, tot_reward2))
                 break
 
-        if WRITE_VIDEO and tot_reward1 > 300:
+        if WRITE_VIDEO and tot_reward1 > 500:
             Writer = matplotlib.animation.writers['ffmpeg']
             writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
             ani = matplotlib.animation.ArtistAnimation(fig, frames, interval=20, blit=True)
-            ani.save('movies/teams_'+ str(tot_reward1) +'.mp4',  writer=writer)
+            ani.save('movies/teams_ind_'+ str(tot_reward1) +'.mp4',  writer=writer)
             print(f'Video saved.')
 
 

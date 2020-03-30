@@ -41,3 +41,8 @@ Two DQN agents that learned defecting policy in a low resource abundance environ
 
 ![](gifs/Supplementary_gif_6.gif)
 
+
+### Supplementary gif 7
+Game in the team setting. Blue team are the two DQN agents that learned to cooperate when using reward signals of R1 + 0.25\*R2 for the first player and R2 + 0.25\*R1 for the second player.
+
+![](gifs/Supplementary_gif_7.gif)

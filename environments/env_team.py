@@ -234,18 +234,14 @@ class GameEnv:
                         agent2.x, agent2.y = agent2_old_x, agent2_old_y
 
 
-        red_reward = 0
-        blue_reward = 0
+        rewards = [0,0,0,0]
         for food in self.food_objects:
             food.sub_hidden()
             if not food.is_hidden():
-                for a in [self.red1, self.red2]:
+                for i, a in enumerate([self.red1, self.red2, self.blue1, self.blue2]):
                     if not a.is_hidden() and food.x == a.x and food.y == a.y:
-                        red_reward += food.eat(self.food_hidden)
-                for a in [self.blue1, self.blue2]:
-                    if not a.is_hidden() and food.x == a.x and food.y == a.y:
-                        blue_reward += food.eat(self.food_hidden)
-
+                        rewards[i] += food.eat(self.food_hidden)
+               
         if (self.red1.x, self.red1.y) in self.blue1_beam_set + self.blue2_beam_set:
             self.red1.add_mark(self.agent_hidden)
         if (self.blue1.x, self.blue1.y) in self.red1_beam_set + self.red2_beam_set:
@@ -255,7 +251,7 @@ class GameEnv:
         if (self.blue2.x, self.blue2.y) in self.red1_beam_set + self.red2_beam_set:
             self.blue2.add_mark(self.agent_hidden)
 
-        return red_reward, blue_reward
+        return rewards[0], rewards[1], rewards[2], rewards[3]
 
 
     def contribute_metrix(self):
